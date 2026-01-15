@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Tag & Attribute Stripper</title>
+    <!-- SVG Favicon (Blue <>) -->
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%233b82f6%22><path d=%22M14.6,16.6L19.2,12L14.6,7.4L16,6L22,12L16,18L14.6,16.6M9.4,16.6L4.8,12L9.4,7.4L8,6L2,12L8,18L9.4,16.6Z%22 /></svg>">
+    <style>
+        :root {
+            /* Default Dark Theme */
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent: #10b981;
+            --danger: #ef4444;
+            --border: #334155;
+            --radius: 8px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --header-border: 1px solid var(--border);
+            --panel-header-bg: rgba(0, 0, 0, 0.2);
+            --input-bg: var(--bg-color);
+
+            --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+            --container-width: 1400px;
+        }
+
+        :root[data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --panel-bg: #ffffff;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --accent: #059669;
+            --danger: #dc2626;
+            --border: #cbd5e1;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --panel-header-bg: #f8fafc;
+            --input-bg: #f8fafc;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            padding: 1rem 2rem;
+            border-bottom: var(--header-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--panel-bg);
+        }
+
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo small {
+            font-size: 12px;
+            align-self: flex-end;
+            color: gray;
+        }
+
+        .logo h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        .logo svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--primary);
+        }
+
+        /* Main Layout */
+        main {
+            flex: 1;
+            padding: 2rem;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: var(--container-width);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            height: 100%;
+        }
+
+        @media (max-width: 900px) {
+            main {
+                overflow-y: auto;
+                display: block;
+            }
+
+            .main-container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .logo small {
+                display: none;
+            }
+            
+            .logo h1 {
+                font-size: 1.1rem; /* Slightly smaller on mobile */
+            }
+        }
+
+        /* Panels */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .panel-header {
+            padding: 0.75rem 1rem;
+            background: var(--panel-header-bg);
+            border-bottom: 1px solid var(--border);
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 54px;
+            /* Ensure consistent height */
+        }
+
+        .editor-container {
+            flex: 1;
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            padding: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+        }
+
+        textarea::placeholder {
+            color: rgba(148, 163, 184, 0.4);
+        }
+
+        /* Controls Area */
+        .controls {
+            padding: 1.5rem 2rem;
+            background: var(--panel-bg);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: center;
+        }
+
+        .controls-container {
+            width: 100%;
+            max-width: var(--container-width);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .controls-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .inputs-wrapper {
+            display: flex;
+            gap: 1rem;
+            flex: 1;
+            flex-wrap: wrap;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .input-group label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .input-group input {
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--radius);
+            font-family: var(--font-mono);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary);
+        }
+
+        .hint {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.1rem;
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.6rem 1.25rem;
+            border-radius: var(--radius);
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        /* Toast Notification */
+        #toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--accent);
+            color: #fff;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            font-weight: 600;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+            z-index: 100;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            max-width: 300px;
+        }
+
+        #toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #toast.error {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* SVG Icons */
+        .icon {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        /* Scrollbar styling */
+        textarea::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        textarea::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        textarea::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        textarea::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Rules System */
+        .rules-section {
+            width: 100%;
+            margin-top: 1rem;
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+        }
+
+        .rule-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .rule-row .input-group {
+            min-width: 0;
+            flex: 1;
+        }
+
+        /* Remove labels in rows to save space, rely on placeholders or initial header? 
+           Actually, let's just keep placeholders clean.
+        */
+        .rule-row .input-group input {
+            width: 100%;
+        }
+
+        .btn-icon-danger {
+            padding: 0.5rem;
+            color: var(--danger);
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+            /* Match input height roughly */
+            width: 38px;
+            flex-shrink: 0;
+        }
+
+        .btn-icon-danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--danger);
+        }
+
+        .section-header-sm {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .section-header-sm label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-sm {
+            padding: 0.3rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        /* Input with Clear Button */
+        .relative-input-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            /* Ensure container takes full available width */
+        }
+
+        .relative-input-container input {
+            padding-right: 2.2rem;
+            /* Space for X button */
+            width: 100%;
+            /* Ensure input takes full width of container */
+        }
+
+        .clear-input-btn {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s, color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            /* Larger hit area */
+            height: 100%;
+            line-height: 1;
+        }
+
+        .relative-input-container:hover .clear-input-btn,
+        .relative-input-container:focus-within .clear-input-btn {
+            opacity: 0.5;
+        }
+
+        .clear-input-btn:hover {
+            opacity: 1 !important;
+            color: var(--text-main);
+        }
+
+        /* Footer */
+        .app-footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            background: var(--panel-bg);
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M14.6,16.6L19.2,12L14.6,7.4L16,6L22,12L16,18L14.6,16.6M9.4,16.6L4.8,12L9.4,7.4L8,6L2,12L8,18L9.4,16.6Z" />
+            </svg>
+            <h1>HTML Stripper</h1>
+            <small>Remove HTML tags and attributes from your code</small>
+        </div>
+        <div class="btn-group">
+            <button id="themeToggle" class="btn btn-secondary" aria-label="Toggle Dark Mode">
+                <!-- Icon set by JS -->
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path
+                        d="M12,18C11.11,18 10.26,17.8 9.5,17.45C11.56,16.3 13,14.23 13,11.5C13,8.77 11.56,6.7 9.5,5.55C10.26,5.2 11.11,5 12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,18M12,3A9,9 0 0,0 3,12A9,9 0 0,0 12,21A9,9 0 0,0 21,12A9,9 0 0,0 12,3Z" />
+                </svg>
+            </button>
+            <button id="clearBtn" class="btn btn-secondary" aria-label="Clear All">
+                Clear
+            </button>
+            <button id="stripBtn" class="btn btn-primary">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
+                </svg>
+                Process
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <div class="main-container">
+            <!-- Input Panel -->
+            <section class="panel">
+                <div class="panel-header">
+                    <span>Input HTML</span>
+                    <span style="font-size: 0.75rem; opacity: 0.7;">Paste your code here</span>
+                </div>
+                <div class="editor-container">
+                    <textarea id="sourceCode" placeholder="Input HTML..."></textarea>
+                </div>
+            </section>
+
+            <!-- Result Panel -->
+            <section class="panel">
+                <div class="panel-header">
+                    <span>Result HTML</span>
+                    <button id="copyBtn" class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;"
+                        aria-label="Copy Result" disabled>
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path
+                                d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z" />
+                        </svg>
+                        Copy
+                    </button>
+                </div>
+                <div class="editor-container">
+                    <textarea id="resultCode" readonly placeholder="Processed HTML will appear here..."></textarea>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Controls Bar -->
+    <div class="controls">
+        <div class="controls-container">
+            <div class="controls-row">
+                <div class="inputs-wrapper">
+                    <!-- Tag Input -->
+                    <div class="input-group">
+                        <label for="tagInput">Tags to Remove</label>
+                        <div class="relative-input-container">
+                            <input type="text" id="tagInput" placeholder="e.g. script, style" value="script">
+                            <button class="clear-input-btn" aria-label="Clear field">×</button>
+                        </div>
+                        <span class="hint">Removes entire elements</span>
+                    </div>
+
+                    <!-- Attribute Input -->
+                    <div class="input-group">
+                        <label for="attrInput">Attributes to Remove</label>
+                        <div class="relative-input-container">
+                            <input type="text" id="attrInput" placeholder="e.g. class, style, onclick" value="style">
+                            <button class="clear-input-btn" aria-label="Clear field">×</button>
+                        </div>
+                        <span class="hint">Removes attributes from remaining tags</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rules Container -->
+            <div class="rules-section">
+                <div class="section-header-sm">
+                    <label>Replacement Rules (Processed Sequentially)</label>
+                    <button id="addRuleBtn" class="btn btn-secondary btn-sm">+ Add Rule</button>
+                </div>
+                <div id="rulesContainer">
+                    <!-- Rules injected by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="app-footer">
+        Made this with <span style="color: var(--danger);">❤</span> by Asiqur Rahman
+    </footer>
+
+    <!-- Toast Notification -->
+    <div id="toast">Processed successfully!</div>
+
+    <script>
+        // DOM Elements
+        const sourceCode = document.getElementById('sourceCode');
+        const resultCode = document.getElementById('resultCode');
+        const tagInput = document.getElementById('tagInput');
+        const attrInput = document.getElementById('attrInput');
+
+        const rulesContainer = document.getElementById('rulesContainer');
+        const addRuleBtn = document.getElementById('addRuleBtn');
+
+        const stripBtn = document.getElementById('stripBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const themeToggle = document.getElementById('themeToggle');
+        const toast = document.getElementById('toast');
+
+        // --- Theme Management ---
+        const moonIcon = '<svg class="icon" viewBox="0 0 24 24"><path d="M12,18C11.11,18 10.26,17.8 9.5,17.45C11.56,16.3 13,14.23 13,11.5C13,8.77 11.56,6.7 9.5,5.55C10.26,5.2 11.11,5 12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,18M12,3A9,9 0 0,0 3,12A9,9 0 0,0 12,21A9,9 0 0,0 21,12A9,9 0 0,0 12,3Z" /></svg>';
+        const sunIcon = '<svg class="icon" viewBox="0 0 24 24"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,7.53C6.97,8.28 6.56,9.1 6.27,10H2.12L3.34,7M2.12,14H6.27C6.56,14.9 6.97,15.72 7.5,16.47L3.34,17L2.12,14M9.61,18.58C10.35,18.85 11.16,19 12,19C12.84,19 13.65,18.85 14.39,18.58L12,22L9.61,18.58M16.5,16.47C17.03,15.72 17.44,14.9 17.73,14H21.88L20.66,17L16.5,16.47M17.73,10C17.44,9.1 17.03,8.28 16.5,7.53L20.66,7L21.88,10H17.73Z" /></svg>';
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            let theme = 'dark'; // Default
+            if (savedTheme) {
+                theme = savedTheme;
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                theme = 'light';
+            }
+            applyTheme(theme);
+        }
+
+        function applyTheme(theme) {
+            if (theme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                themeToggle.innerHTML = moonIcon;
+                themeToggle.setAttribute('aria-label', 'Switch to Dark Mode');
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                themeToggle.innerHTML = sunIcon;
+                themeToggle.setAttribute('aria-label', 'Switch to Light Mode');
+            }
+            localStorage.setItem('theme', theme);
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+        });
+
+        // Initialize Theme & Settings
+        initTheme();
+        loadSettings(); // Load persisted settings
+
+        // Core Function: Strip Tags and Attributes
+        function processHtml() {
+            const rawHtml = sourceCode.value;
+
+            if (!rawHtml.trim()) {
+                showToast("Please paste some HTML code first.", true);
+                return;
+            }
+
+            const tagsString = tagInput.value;
+            const attrsString = attrInput.value;
+
+            // Collect Rules
+            const ruleRows = Array.from(rulesContainer.querySelectorAll('.rule-row'));
+            const rules = ruleRows.map(row => ({
+                find: row.querySelector('.find-input').value,
+                replace: row.querySelector('.replace-input').value
+            })).filter(r => r.find); // Only keep rules with a find term
+
+            const tagsToRemove = tagsString.split(',')
+                .map(tag => tag.trim().toLowerCase())
+                .filter(tag => tag.length > 0);
+
+            const attrsToRemove = attrsString.split(',')
+                .map(attr => attr.trim().toLowerCase())
+                .filter(attr => attr.length > 0);
+
+            if (tagsToRemove.length === 0 && attrsToRemove.length === 0 && rules.length === 0) {
+                showToast("Please specify tags, attributes, or rules.", true);
+                return;
+            }
+
+            try {
+                // 1. Parse HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(rawHtml, 'text/html');
+
+                let removedTagsCount = 0;
+                let removedAttrsCount = 0;
+                let replacedCount = 0;
+
+                // 2. Remove TAGS (Entire Elements)
+                tagsToRemove.forEach(tag => {
+                    const elements = doc.querySelectorAll(tag);
+                    elements.forEach(el => {
+                        el.remove();
+                        removedTagsCount++;
+                    });
+                });
+
+                // 3. Remove ATTRIBUTES (From Remaining Elements)
+                if (attrsToRemove.length > 0) {
+                    // Select all remaining elements
+                    const allElements = doc.querySelectorAll('*');
+                    allElements.forEach(el => {
+                        attrsToRemove.forEach(attr => {
+                            // hasAttribute is case-insensitive in DOM usually, 
+                            // but we use lower to be safe with the input matching
+                            if (el.hasAttribute(attr)) {
+                                el.removeAttribute(attr);
+                                removedAttrsCount++;
+                            }
+                        });
+                    });
+                }
+
+                // 4. Generate Output
+                let outputHtml = '';
+                const isFullDoc = rawHtml.trim().toLowerCase().startsWith('<!doctype') ||
+                    rawHtml.trim().toLowerCase().startsWith('<html');
+
+                if (isFullDoc) {
+                    outputHtml = doc.documentElement.outerHTML;
+                } else {
+                    outputHtml = doc.body.innerHTML;
+                }
+
+                // 5. Find and Replace (Sequential)
+                if (rules.length > 0) {
+                    rules.forEach(rule => {
+                        if (!rule.find) return;
+
+                        // Escape regex
+                        const escapedSearch = rule.find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(escapedSearch, 'g');
+
+                        const matches = outputHtml.match(regex);
+                        if (matches) {
+                            replacedCount += matches.length;
+                            outputHtml = outputHtml.replace(regex, rule.replace);
+                        }
+                    });
+                }
+
+                resultCode.value = outputHtml;
+
+                // Feedback Message
+                let message = [];
+                if (removedTagsCount > 0) message.push(`${removedTagsCount} tags`);
+                if (removedAttrsCount > 0) message.push(`${removedAttrsCount} attributes`);
+                if (replacedCount > 0) message.push(`${replacedCount} replacements`);
+
+                showToast(message.length > 0 ? `Removed ${message.join(' & ')}.` : "Processing complete.");
+
+                // Enable copy button
+                copyBtn.disabled = !outputHtml;
+
+            } catch (error) {
+                console.error(error);
+                showToast("Error processing HTML.", true);
+            }
+        }
+
+        // Helper: Show Toast
+        let toastTimeout;
+        function showToast(message, isError = false) {
+            toast.textContent = message;
+            toast.className = isError ? 'error' : ''; // Reset class
+            toast.classList.add('show');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Helper: Copy to Clipboard
+        function copyToClipboard() {
+            if (!resultCode.value) return;
+
+            navigator.clipboard.writeText(resultCode.value).then(() => {
+                showToast("HTML copied to clipboard!");
+            }).catch(err => {
+                showToast("Failed to copy.", true);
+            });
+        }
+
+        // Helper: Clear All
+        function clearAll() {
+            sourceCode.value = '';
+            resultCode.value = '';
+            // Reset defaults or clear inputs
+            tagInput.value = 'script';
+            attrInput.value = 'style';
+            // Reset rules to just one empty one
+            rulesContainer.innerHTML = '';
+            addRule();
+            copyBtn.disabled = true;
+            sourceCode.focus();
+        }
+
+        // Helper: Add Rule Row (Updated for Clear Button & Persistence)
+        function addRule(findVal = '', replaceVal = '') {
+            const div = document.createElement('div');
+            div.className = 'rule-row';
+            div.innerHTML = `
+                <div class="input-group">
+                    <div class="relative-input-container">
+                        <input type="text" class="find-input" placeholder="Find" value="${findVal}">
+                        <button class="clear-input-btn" aria-label="Clear field">×</button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <div class="relative-input-container">
+                        <input type="text" class="replace-input" placeholder="Replace With" value="${replaceVal}">
+                        <button class="clear-input-btn" aria-label="Clear field">×</button>
+                    </div>
+                </div>
+                <button class="btn-icon-danger remove-rule-btn" title="Remove Rule" tabindex="-1">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
+                    </svg>
+                </button>
+            `;
+
+            // Event listeners for the new row
+            const removeBtn = div.querySelector('.remove-rule-btn');
+            removeBtn.addEventListener('click', () => {
+                div.remove();
+                saveSettings(); // Save after removal
+                if (rulesContainer.children.length === 0) {
+                    addRule(); // Always keep at least one
+                }
+            });
+
+            // Input handlers
+            const inputs = div.querySelectorAll('input');
+            inputs.forEach(input => {
+                // Save on change
+                input.addEventListener('input', saveSettings);
+
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') processHtml();
+                });
+            });
+
+            // Clear Button handlers for new row
+            const clearBtns = div.querySelectorAll('.clear-input-btn');
+            clearBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const input = e.target.closest('.relative-input-container').querySelector('input');
+                    input.value = '';
+                    input.focus();
+                    saveSettings(); // Save
+                });
+            });
+
+            rulesContainer.appendChild(div);
+        }
+
+        // --- Settings Persistence ---
+        function saveSettings() {
+            const rules = Array.from(rulesContainer.querySelectorAll('.rule-row')).map(row => ({
+                find: row.querySelector('.find-input').value,
+                replace: row.querySelector('.replace-input').value
+            }));
+
+            // Filter out empty trailing rules if desired, but for now we save state as is
+            // Actually, let's keep it simple.
+
+            const settings = {
+                tags: tagInput.value,
+                attrs: attrInput.value,
+                rules: rules
+            };
+
+            localStorage.setItem('htmlStripperSettings', JSON.stringify(settings));
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('htmlStripperSettings');
+            if (saved) {
+                try {
+                    const settings = JSON.parse(saved);
+                    if (settings.tags !== undefined) tagInput.value = settings.tags;
+                    if (settings.attrs !== undefined) attrInput.value = settings.attrs;
+
+                    if (settings.rules && Array.isArray(settings.rules) && settings.rules.length > 0) {
+                        rulesContainer.innerHTML = ''; // Clear defaults
+                        settings.rules.forEach(rule => {
+                            addRule(rule.find, rule.replace);
+                        });
+                    }
+                } catch (e) {
+                    console.error("Failed to load settings", e);
+                }
+            }
+        }
+
+        // Event Listeners
+        addRuleBtn.addEventListener('click', () => {
+            addRule();
+            // No need to save immediately on add empty rule, wait for input
+        });
+
+        // Init with one rule if empty (loadSettings handles this check logically but if empty localstorage, we need default)
+        if (rulesContainer.children.length === 0) {
+            addRule();
+        }
+
+        // Attach Save listeners to main inputs
+        tagInput.addEventListener('input', saveSettings);
+        attrInput.addEventListener('input', saveSettings);
+
+        // Attach Clear listeners to main inputs
+        document.querySelectorAll('.input-group .clear-input-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const input = e.target.closest('.relative-input-container').querySelector('input');
+                input.value = '';
+                input.focus();
+                saveSettings();
+            });
+        });
+
+        stripBtn.addEventListener('click', processHtml);
+
+        clearBtn.addEventListener('click', clearAll);
+
+        copyBtn.addEventListener('click', copyToClipboard);
+
+        // Allow "Enter" key in main inputs
+        [tagInput, attrInput].forEach(input => {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    processHtml();
+                }
+            });
+        });
+
+    </script>
+</body>
+
+</html>
