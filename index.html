@@ -486,6 +486,71 @@
             color: var(--text-main);
         }
 
+        /* Toggle Switch */
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            user-select: none;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border);
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        input:focus+.slider {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+
+        .toggle-label {
+            font-size: 0.9rem;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
         /* Footer */
         .app-footer {
             text-align: center;
@@ -556,7 +621,7 @@
                     </button>
                 </div>
                 <div class="editor-container">
-                    <textarea id="resultCode" readonly placeholder="Processed HTML will appear here..."></textarea>
+                    <textarea id="resultCode" placeholder="Processed HTML will appear here..."></textarea>
                 </div>
             </section>
         </div>
@@ -585,6 +650,26 @@
                             <button class="clear-input-btn" aria-label="Clear field">×</button>
                         </div>
                         <span class="hint">Removes attributes from remaining tags</span>
+                        <span class="hint">Removes attributes from remaining tags</span>
+                    </div>
+                </div>
+
+                <!-- Features Toggles -->
+                <div class="toggles-wrapper" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                    <div class="toggle-group" style="margin-top: 0;">
+                        <label class="switch">
+                            <input type="checkbox" id="removeCommentsToggle">
+                            <span class="slider"></span>
+                        </label>
+                        <span class="toggle-label">Remove HTML Comments</span>
+                    </div>
+                
+                    <div class="toggle-group" style="margin-top: 0;">
+                        <label class="switch">
+                            <input type="checkbox" id="removeLineBreaksToggle">
+                            <span class="slider"></span>
+                        </label>
+                        <span class="toggle-label">Remove Double Line Breaks</span>
                     </div>
                 </div>
             </div>
@@ -615,6 +700,8 @@
         const resultCode = document.getElementById('resultCode');
         const tagInput = document.getElementById('tagInput');
         const attrInput = document.getElementById('attrInput');
+        const removeCommentsToggle = document.getElementById('removeCommentsToggle');
+        const removeLineBreaksToggle = document.getElementById('removeLineBreaksToggle');
 
         const rulesContainer = document.getElementById('rulesContainer');
         const addRuleBtn = document.getElementById('addRuleBtn');
@@ -665,7 +752,7 @@
 
         // Core Function: Strip Tags and Attributes
         function processHtml() {
-            const rawHtml = sourceCode.value;
+            let rawHtml = sourceCode.value;
 
             if (!rawHtml.trim()) {
                 showToast("Please paste some HTML code first.", true);
@@ -696,7 +783,12 @@
             }
 
             try {
-                // 1. Parse HTML
+                // 1. Remove Comments (if enabled) - Do this first on raw string
+                if (removeCommentsToggle.checked) {
+                    rawHtml = rawHtml.replace(/<!--[\s\S]*?-->/g, '');
+                }
+
+                // 2. Parse HTML
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(rawHtml, 'text/html');
 
@@ -755,6 +847,12 @@
                             outputHtml = outputHtml.replace(regex, rule.replace);
                         }
                     });
+                }
+                
+                // 6. Remove Double Line Breaks (if enabled)
+                if (removeLineBreaksToggle.checked) {
+                     // Replace 2 or more newlines (including whitespace between them) with a single newline
+                     outputHtml = outputHtml.replace(/(\n\s*){2,}/g, '\n');
                 }
 
                 resultCode.value = outputHtml;
@@ -886,6 +984,8 @@
             const settings = {
                 tags: tagInput.value,
                 attrs: attrInput.value,
+                removeComments: removeCommentsToggle.checked, // Save toggle state
+                removeLineBreaks: removeLineBreaksToggle.checked,
                 rules: rules
             };
 
@@ -899,6 +999,8 @@
                     const settings = JSON.parse(saved);
                     if (settings.tags !== undefined) tagInput.value = settings.tags;
                     if (settings.attrs !== undefined) attrInput.value = settings.attrs;
+                    if (settings.removeComments !== undefined) removeCommentsToggle.checked = settings.removeComments;
+                    if (settings.removeLineBreaks !== undefined) removeLineBreaksToggle.checked = settings.removeLineBreaks;
 
                     if (settings.rules && Array.isArray(settings.rules) && settings.rules.length > 0) {
                         rulesContainer.innerHTML = ''; // Clear defaults
@@ -926,6 +1028,8 @@
         // Attach Save listeners to main inputs
         tagInput.addEventListener('input', saveSettings);
         attrInput.addEventListener('input', saveSettings);
+        removeCommentsToggle.addEventListener('change', saveSettings);
+        removeLineBreaksToggle.addEventListener('change', saveSettings);
 
         // Attach Clear listeners to main inputs
         document.querySelectorAll('.input-group .clear-input-btn').forEach(btn => {
@@ -942,6 +1046,11 @@
         clearBtn.addEventListener('click', clearAll);
 
         copyBtn.addEventListener('click', copyToClipboard);
+
+        // Enable/Disable Copy Button based on manual edits to Result Code
+        resultCode.addEventListener('input', () => {
+            copyBtn.disabled = !resultCode.value.trim();
+        });
 
         // Allow "Enter" key in main inputs
         [tagInput, attrInput].forEach(input => {
